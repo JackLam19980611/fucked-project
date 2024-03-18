@@ -9,6 +9,9 @@ from ultralytics.utils.plotting import Annotator
 import second_validation
 import stream
 
+def thread_handler(recorder, accidents, time):
+    recorder.generateVideo()
+    multi_data_form.make_request(accidents,time)
     
 def main():
     # camera set up
@@ -44,8 +47,9 @@ def main():
             currentTime = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
             cv2.putText(frame, currentTime, coordinate, font, fontScale, borderColor, thickness+1, lineType) # border of current time
             cv2.putText(frame, currentTime, coordinate, font, fontScale, textColor, thickness, lineType)
-            stream.stream(frame)
             accidentRecord.addFrame(frame)
+            #p = threading.Thread(target = stream.stream, args=[frame])
+            #p.start()
             for result in results[0]: # each of result only contains one class
                 if names[int(result.boxes.cls)] == 'Fall':
                     detectedAccidents.add(names[int(result.boxes.cls)])
@@ -63,11 +67,12 @@ def main():
                     VotingStart = False
                     votingResult = secondValidation.majorityCounting()
                 print(votingResult)
-                if len(votingResult) != 0:
-                    accidentRecord.generateVideo()
-                    multi_data_form.make_request(votingResult, currentTime)
-                    print("")
-                    votingResult = []    
+                if len(votingResult) != 0:  
+                    p = threading.Thread(target=thread_handler, args=[accidentRecord, detectedAccidents, currentTime])
+                    p.start()
+                    print("video generation started, please wait a seconds...............")
+                    votingResult = [] 
+                # ### the lock need to be release after generation and may be send out the video
             for r in results: 
                 annotator = Annotator(frame)
                 boxes = r.boxes
